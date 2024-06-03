@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int      @id @default(autoincrement())
+  name              String
+  username          String   @unique
+  email             String   @unique
+  password          String
+  quote             String? // nullable
+  profilePictureUrl String? // nullable
+  coverPictureUrl   String? // nullable
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  threads           Thread[]
+  comments          Comment[]
+  threadLikes       ThreadLike[]
+  commentLikes      CommentLike[]
+  replyComments     ReplyComment[]
+  replyCommentLikes ReplyCommentLike[]
+  followers         Follow[]           @relation("followers")
+  following         Follow[]           @relation("following")
+}
+
+model Thread {
+  id        Int      @id @default(autoincrement())
+  caption   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  authorId Int
+  author   User         @relation(fields: [authorId], references: [id])
+  comments Comment[]
+  likes    ThreadLike[]
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  threadId Int
+  thread   Thread         @relation(fields: [threadId], references: [id])
+  authorId Int
+  author   User           @relation(fields: [authorId], references: [id])
+  replies  ReplyComment[]
+  likes    CommentLike[]
+}
+
+model ThreadLike {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id])
+  threadId Int
+  thread   Thread @relation(fields: [threadId], references: [id])
+
+  @@unique([userId, threadId]) // Unique constraint to ensure one like per user per thread
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  commentId Int
+  comment   Comment @relation(fields: [commentId], references: [id])
+
+  @@unique([userId, commentId]) // Unique constraint to ensure one like per user per comment
+}
+
+model ReplyComment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  commentId Int
+  comment   Comment            @relation(fields: [commentId], references: [id])
+  authorId  Int
+  author    User               @relation(fields: [authorId], references: [id])
+  likes     ReplyCommentLike[]
+}
+
+model ReplyCommentLike {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  userId         Int
+  user           User         @relation(fields: [userId], references: [id])
+  replyCommentId Int
+  replyComment   ReplyComment @relation(fields: [replyCommentId], references: [id])
+
+  @@unique([userId, replyCommentId]) // Unique constraint to ensure one like per user per reply comment
+}
+
+model Follow {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  // Relationships
+  followerId Int
+  follower   User @relation("followers", fields: [followerId], references: [id])
+
+  followingId Int
+  following   User @relation("following", fields: [followingId], references: [id])
+
+   @@unique([followerId, followingId]) // Unique constraint to ensure one person follow only one
+}
