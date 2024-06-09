@@ -3,8 +3,7 @@ import { CreateThreadDTO,UpdateThreadDTO } from "../dto/dto-thread";
 
 export const createThreadSchema = joi.object <CreateThreadDTO> ({
     caption: joi.string().required(),
-    imageUrl: joi.string().uri().optional(),
-    authorId: joi.number().integer().required()
+    imageUrl: joi.string().uri().optional()
 })
 
 export const updateThreadSchema = joi.object<UpdateThreadDTO>({

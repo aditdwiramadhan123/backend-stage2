@@ -1,12 +1,14 @@
-// DONE
-
 import { PrismaClient, Prisma } from "@prisma/client";
-import { CreateCommentDTO,UpdateCommentDTO } from "../dto/dto-comment";
+import { CreateCommentDTO, UpdateCommentDTO } from "../dto/dto-comment";
+import uploadCloudinary from "../cloudinary-config";
+
 const prisma = new PrismaClient();
 
- async function findAllComments(threadId:number) {
+async function findAllComments(threadId: number) {
   try {
-    const comments = await prisma.comment.findMany({where:{threadId:threadId}});
+    const comments = await prisma.comment.findMany({
+      where: { threadId },
+    });
     return comments;
   } catch (error) {
     console.error("Error fetching all comments:", error);
@@ -14,7 +16,7 @@ const prisma = new PrismaClient();
   }
 }
 
- async function findCommentById(commentId: number) {
+async function findCommentById(commentId: number) {
   try {
     const comment = await prisma.comment.findUnique({
       where: { id: commentId },
@@ -26,10 +28,23 @@ const prisma = new PrismaClient();
   }
 }
 
- async function createComment(commentData: CreateCommentDTO) {
+async function createComment(commentData: CreateCommentDTO) {
   try {
+    let uploadImage: { secure_url: string | null } = { secure_url: null };
+
+    if (commentData.imageUrl) {
+      try {
+        uploadImage = await uploadCloudinary(commentData.imageUrl);
+      } catch (error) {
+        console.error("Error uploading image to Cloudinary:", error);
+      }
+    }
+
     const newComment = await prisma.comment.create({
-      data: commentData,
+      data: {
+        ...commentData,
+        imageUrl: uploadImage.secure_url,
+      },
     });
     return newComment;
   } catch (error) {
@@ -38,8 +53,18 @@ const prisma = new PrismaClient();
   }
 }
 
- async function updateComment(commentId: number, updateData: UpdateCommentDTO) {
+async function updateComment(commentId: number, updateData: UpdateCommentDTO) {
   try {
+    let uploadImage: { secure_url: string | null } = { secure_url: null };
+
+    if (updateData.imageUrl) {
+      try {
+        uploadImage = await uploadCloudinary(updateData.imageUrl);
+      } catch (error) {
+        console.error("Error uploading image to Cloudinary:", error);
+      }
+    }
+
     const existingComment = await prisma.comment.findUnique({
       where: { id: commentId },
     });
@@ -50,7 +75,7 @@ const prisma = new PrismaClient();
 
     const updatedComment = await prisma.comment.update({
       where: { id: commentId },
-      data: updateData,
+      data: { ...updateData, imageUrl: uploadImage.secure_url },
     });
 
     return updatedComment;
@@ -60,7 +85,7 @@ const prisma = new PrismaClient();
   }
 }
 
- async function deleteComment(commentId: number) {
+async function deleteComment(commentId: number) {
   try {
     const deletedComment = await prisma.comment.delete({
       where: { id: commentId },
@@ -72,4 +97,10 @@ const prisma = new PrismaClient();
   }
 }
 
-export default {findAllComments,findCommentById, createComment,updateComment,deleteComment}
+export default {
+  findAllComments,
+  findCommentById,
+  createComment,
+  updateComment,
+  deleteComment,
+};

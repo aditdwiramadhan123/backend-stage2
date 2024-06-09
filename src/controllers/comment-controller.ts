@@ -32,13 +32,24 @@ async function findOne(req: Request, res: Response) {
 
 async function create(req: Request, res: Response) {
   try {
-    const data: CreateCommentDTO = req.body;
-    if (!data.content || !data.authorId || !data.threadId) {
+    const userId = res.locals.user.id;
+    const threadId= Number(req.params.threadId);
+    const commentData: CreateCommentDTO = {
+      ...req.body,
+      imageUrl: req.file ? req.file.path : null,
+      authorId: userId,
+      threadId
+    };
+    console.log(commentData)
+  
+
+
+    if (!commentData.content || !userId || !threadId) {
       return res
         .status(400)
         .json({ error: "Content, authorId, and threadId are required" });
     }
-    const newComment = await CommentService.createComment(data);
+    const newComment = await CommentService.createComment(commentData);
     res.status(201).json(newComment);
   } catch (error) {
     res.status(500).json({ error: "Failed to create comment" });
@@ -47,14 +58,21 @@ async function create(req: Request, res: Response) {
 
 async function update(req: Request, res: Response) {
   try {
-    const data: UpdateCommentDTO = req.body;
+    const commentData: CreateCommentDTO = {
+      ...req.body,
+      imageUrl: req.file ? req.file.path : null,
+    };
     const { commentId } = req.params;
     const commentIdNumber: number = Number(commentId);
+  
 
-    if (!data.content) {
+    if (!commentData.content) {
       return res.status(400).json({ error: "Content is required" });
     }
-    const updatedComment = await CommentService.updateComment(commentIdNumber, data);
+    const updatedComment = await CommentService.updateComment(
+      commentIdNumber,
+      commentData
+    );
     if (!updatedComment) {
       return res.status(404).json({ error: "Comment not found" });
     }

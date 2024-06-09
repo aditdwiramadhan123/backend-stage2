@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
-import ReplyCommentService from "../services/reply-comment-service"
+import ReplyCommentService from "../services/reply-comment-service";
 import { CreateCommentReplyDTO, UpdateCommentReplyDTO } from "../dto/dto-comment-reply";
 
 const prisma = new PrismaClient();
@@ -32,13 +32,21 @@ async function findOne(req: Request, res: Response) {
 
 async function create(req: Request, res: Response) {
   try {
-    const data: CreateCommentReplyDTO = req.body;
-    if (!data.content || !data.authorId || !data.commentId) {
+    const userId = res.locals.user.id;
+    const commentId = Number(req.params.commentId);
+    const replyCommentData: CreateCommentReplyDTO = {
+      ...req.body,
+      imageUrl: req.file ? req.file.path : null,
+      authorId: userId,
+      commentId
+    };
+
+    if (!replyCommentData.content || !userId || !commentId) {
       return res
         .status(400)
         .json({ error: "Content, authorId, and commentId are required" });
     }
-    const newReplyComment = await ReplyCommentService.createReplyComment(data);
+    const newReplyComment = await ReplyCommentService.createReplyComment(replyCommentData);
     res.status(201).json(newReplyComment);
   } catch (error) {
     res.status(500).json({ error: "Failed to create reply comment" });
@@ -47,14 +55,21 @@ async function create(req: Request, res: Response) {
 
 async function update(req: Request, res: Response) {
   try {
-    const data: UpdateCommentReplyDTO = req.body;
+    const replyCommentData: UpdateCommentReplyDTO = {
+      ...req.body,
+      imageUrl: req.file ? req.file.path : null,
+    };
+    console.log(replyCommentData)
     const { replyCommentId } = req.params;
     const replyCommentIdNumber: number = Number(replyCommentId);
 
-    if (!data.content) {
+    if (!replyCommentData.content) {
       return res.status(400).json({ error: "Content is required" });
     }
-    const updatedReplyComment = await ReplyCommentService.updateReplyComment(replyCommentIdNumber, data);
+    const updatedReplyComment = await ReplyCommentService.updateReplyComment(
+      replyCommentIdNumber,
+      replyCommentData
+    );
     if (!updatedReplyComment) {
       return res.status(404).json({ error: "Reply comment not found" });
     }

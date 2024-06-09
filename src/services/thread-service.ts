@@ -1,7 +1,6 @@
-// DONE
-
 import { PrismaClient, Prisma } from "@prisma/client";
-import { CreateThreadDTO,UpdateThreadDTO } from "../dto/dto-thread";
+import { CreateThreadDTO, UpdateThreadDTO } from "../dto/dto-thread";
+import uploadCloudinary from "../cloudinary-config";
 
 const prisma = new PrismaClient();
 
@@ -27,10 +26,24 @@ async function findThreadById(threadId: number) {
   }
 }
 
-async function createThread(threadData: CreateThreadDTO) {
+async function createThread(authorId: number, threadData: CreateThreadDTO) {
   try {
+    let uploadImage: { secure_url: string | null } = { secure_url: null };
+
+    if (threadData.imageUrl) {
+      try {
+        uploadImage = await uploadCloudinary(threadData.imageUrl);
+      } catch (error) {
+        console.error("Error uploading image to Cloudinary:", error);
+      }
+    }
+
     const newThread = await prisma.thread.create({
-      data: threadData,
+      data: {
+        ...threadData,
+        authorId,
+        imageUrl: uploadImage.secure_url,
+      },
     });
     return newThread;
   } catch (error) {
@@ -39,8 +52,18 @@ async function createThread(threadData: CreateThreadDTO) {
   }
 }
 
-async function updateThread(threadData:UpdateThreadDTO,threadId:number) {
+async function updateThread(threadId: number, threadData: UpdateThreadDTO) {
   try {
+    let uploadImage: { secure_url: string | null } = { secure_url: null };
+
+    if (threadData.imageUrl) {
+      try {
+        uploadImage = await uploadCloudinary(threadData.imageUrl);
+      } catch (error) {
+        console.error("Error uploading image to Cloudinary:", error);
+      }
+    }
+
     const existingThread = await prisma.thread.findUnique({
       where: { id: threadId },
     });
@@ -51,7 +74,7 @@ async function updateThread(threadData:UpdateThreadDTO,threadId:number) {
 
     const updatedThread = await prisma.thread.update({
       where: { id: threadId },
-      data: threadData,
+      data: { ...threadData, imageUrl: uploadImage.secure_url },
     });
 
     return updatedThread;
