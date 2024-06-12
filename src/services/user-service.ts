@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, User } from "@prisma/client";
 import {
   CreateAccountDTO,
   UpdateAccountDTO,
@@ -12,12 +12,49 @@ import {
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import uploadCloudinary from "../cloudinary-config";
+import { number } from "joi";
 
 const prisma = new PrismaClient();
 
+type Follower = {
+  followingId: number;
+};
+
+type Following = {
+  followerId: number;
+};
+
+interface MyTypeUser extends User {
+  followers: Follower[];
+  following: Following[];
+  _count: {
+    followers: number;
+    following: number;
+  };
+}
+
 async function findAllUsers() {
   try {
-    const users = await prisma.user.findMany();
+    const users = (await prisma.user.findMany({
+      include: {
+        followers: { select: { followingId: true } },
+        following: { select: { followerId: true } },
+      },
+    })) as MyTypeUser[];
+    return users;
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    throw error;
+  }
+}
+
+async function findAllUsersByName(username: string) {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        username: username,
+      },
+    });
     return users;
   } catch (error) {
     console.error("Error fetching all users:", error);
@@ -29,7 +66,12 @@ async function findUserByName(username: string) {
   try {
     const user = await prisma.user.findUnique({
       where: { username },
-    });
+      include: {
+        followers: { select: { followingId: true, } },
+        following: { select: { followerId: true } },
+        _count :{select:{followers:true,following:true}}
+      },
+    }) as MyTypeUser;
     return user;
   } catch (error) {
     console.error("Error fetching user by username:", error);
@@ -51,7 +93,7 @@ async function createUser(userData: CreateAccountDTO) {
     });
     const jwtSecret = process.env.JWT_SECRET;
     const token = jwt.sign(newUser, jwtSecret);
-    return {token,newUser};
+    return { token, newUser };
   } catch (error) {
     console.error("Error creating user:", error);
     throw error;
@@ -139,4 +181,5 @@ export default {
   updateUser,
   deleteUser,
   loginUser,
+  findAllUsersByName,
 };

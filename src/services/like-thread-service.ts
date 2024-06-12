@@ -33,7 +33,21 @@ async function likeThread(threadId: number, userId: number) {
     });
     return newThreadLike;
   } catch (error) {
-    console.error("Error liking thread:", error);
+    try {
+      const deletedThreadLike = await prisma.threadLike.delete({
+        where: {
+          userId_threadId: {
+            threadId: threadId,
+            userId: userId,
+          },
+        },
+      });
+      return deletedThreadLike;
+    } catch (error) {
+      console.error("Error unliking thread:", error);
+      throw error;
+    }
+
     throw error;
   }
 }

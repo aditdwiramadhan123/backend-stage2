@@ -41,11 +41,11 @@ app.use("/api/v1",threadRoutes)
 
 dotenv.config();
 
-// // ROUTER FOLLOW
-// router.get("/followers/:userId", FollowController.findAllFollowers);
-// router.get("/following/:userId", FollowController.findAllFollowing);
-// router.post("/follow/:userId/:followingId", FollowController.createFollow);
-// router.delete("/follow/:userId/:followingId", FollowController.unFollow);
+// ROUTER FOLLOW
+router.get("/getFollower/:userId",authenticate, FollowController.findAllFollowers);
+router.get("/getFollowing/:userId",authenticate, FollowController.findAllFollowing);
+router.post("/follow/:followingId",authenticate, FollowController.following);
+router.delete("/follow/:userId/:followingId", FollowController.unFollow);
 
 // // ROUTER LIKE REPLY COMMENT
 // router.get(
@@ -77,17 +77,17 @@ dotenv.config();
 //   LikeCommentController.unlikeComment
 // );
 
-// // ROUTER LIKE THREAD
-// router.get("/likes/:threadId", LikeThreadController.findAll);
-// router.get("/like/:threadLikeId", LikeThreadController.findOne);
-// router.post("/like/:userId/:threadId", LikeThreadController.createLike);
-// router.delete("/like/:threadLikeId", LikeThreadController.unlikeThread);
+// ROUTER LIKE THREAD
+router.get("/likes/:threadId", LikeThreadController.findAll);
+router.get("/like/:threadLikeId", LikeThreadController.findOne);
+router.post("/like/:threadId",authenticate, LikeThreadController.createLike);
+router.delete("/like/:threadLikeId", LikeThreadController.unlikeThread);
 
 // ROUTER USER & LOGIN
 router.get("/check",authenticate,UserController.check)
 router.post("/register", UserController.create);
 router.post("/login", UserController.login);
-router.get("/users", UserController.findAll);
+router.get("/users", authenticate, UserController.findAllByName);
 router.patch("/edit-profil", authenticate,upload.single("imageUrl"), UserController.update);
 
 router.get("/user",authenticate, UserController.findOne);

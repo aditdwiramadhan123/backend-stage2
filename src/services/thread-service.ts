@@ -1,12 +1,50 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, Thread, User } from "@prisma/client";
 import { CreateThreadDTO, UpdateThreadDTO } from "../dto/dto-thread";
 import uploadCloudinary from "../cloudinary-config";
+import { MyThreadType, NewThreadType } from "../types/thread-types";
 
 const prisma = new PrismaClient();
 
 async function findAllThreads() {
   try {
-    const threads = await prisma.thread.findMany();
+    const threads = await prisma.thread.findMany({
+      include: {
+        author: {
+          select: {
+            name: true,
+            username: true,
+            profilePictureUrl: true,
+          },
+        },
+        comments: {
+          select: {
+            author: {
+              select: {
+                name: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+        likes: {
+          select: {
+            user: {
+              select: {
+                name: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+        _count: { select: { comments: true, likes: true } },
+      },
+      orderBy: {
+        createdAt: 'desc' // Urutkan berdasarkan waktu pembuatan, descending
+      }
+    } )as MyThreadType[];
+
     return threads;
   } catch (error) {
     console.error("Error fetching all threads:", error);

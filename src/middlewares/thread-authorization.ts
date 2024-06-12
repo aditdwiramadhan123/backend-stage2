@@ -9,14 +9,14 @@ export default async function threadAuth(
   const { postId } = req.params;
   const threadId = Number(postId);
 
-  console.log(res.locals.user); // Tambahkan log untuk debugging
+  console.log(res.locals.user); 
 
   if (!res.locals.user || !res.locals.user.id) {
     return res.status(401).json({ error: "User not authenticated" });
   }
 
   const userId = res.locals.user.id;
-  console.log("User ID:", userId); // Tambahkan log untuk debugging
+  console.log("User ID:", userId); 
 
   const threads = await threadService.findAllThreads();
 

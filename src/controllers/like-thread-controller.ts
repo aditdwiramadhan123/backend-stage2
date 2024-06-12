@@ -6,11 +6,11 @@ const prisma = new PrismaClient();
 
 async function createLike(req: Request, res: Response) {
   try {
-    const { threadId, userId } = req.params;
+    const { threadId } = req.params;
     const threadIdNumber = Number(threadId);
-    const userIdNumber = Number(userId);
+    const userIdNumber = res.locals.user.id;
 
-    if (!userId) {
+    if (!userIdNumber) {
       return res.status(400).json({ error: "User ID is required" });
     }
 

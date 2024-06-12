@@ -9,9 +9,41 @@ import {
 import userService from "../services/user-service";
 const prisma = new PrismaClient();
 
-async function findAll(req: Request, res: Response) {
+async function findAllByName(req: Request, res: Response) {
   try {
-    const users = await UserService.findAllUsers();
+    const name = req.query.name as string;
+    console.log("ini username: ", name);
+    if (!name) {
+      return res
+        .status(400)
+        .json({ error: "Failed to find users: 'name' parameter is required" });
+    }
+    const allUsers = await userService.findAllUsers();
+    const usersFormService = allUsers.filter((user) => {
+      return user.name.toLowerCase() === name.toLowerCase();
+    });
+    // console.log("ini users", usersFormService[0].followers);
+    const userId = res.locals.user.id;
+    console.log("ini user id",userId);
+
+    const users = usersFormService?.map((user) => {
+      user.following.forEach((follower)=>{
+        console.log("ini followrId",follower.followerId)
+       
+
+      })
+      return {
+        name: user.name,
+        profilePictureUrl: user.profilePictureUrl,
+        username: user.username,
+        isFollow: user.following.some((follower) => {
+          return follower.followerId === userId;
+        }),
+      };
+    });
+
+    console.log("ini users", users);
+
     res.status(201).json(users);
   } catch (error) {
     res.status(500).json({ error: "Failed to found users" });
@@ -125,4 +157,12 @@ async function check(req: Request, res: Response) {
   }
 }
 
-export default { findAll, findOne, create, deleted, login, update, check };
+export default {
+  findOne,
+  create,
+  deleted,
+  login,
+  update,
+  check,
+  findAllByName,
+};
