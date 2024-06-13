@@ -33,6 +33,7 @@ async function findAllByName(req: Request, res: Response) {
 
       })
       return {
+        id: user.id,
         name: user.name,
         profilePictureUrl: user.profilePictureUrl,
         username: user.username,

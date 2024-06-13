@@ -38,6 +38,96 @@ async function findAll(req: Request, res: Response) {
   }
 }
 
+async function findAllByName(req: Request, res: Response) {
+  const username = res.locals.user.username;
+  const {authorName} = req.params
+  console.log(authorName)
+
+  if (!authorName) {
+    return res
+      .status(400)
+      .json({ error: "Failed to find users: 'name' parameter is required" });
+  }
+
+  try {
+    const threads = await ThreadService.findAllThreads();
+
+    const threadsByFormat = threads?.map((threadDB) => {
+      return {
+        threadData: {
+          name: threadDB.author.name,
+          profilePictureUrl: threadDB.author.profilePictureUrl,
+          username: threadDB.author.username,
+          id: threadDB.id,
+          caption: threadDB.caption,
+          duration: calculateDuration(threadDB.createdAt),
+          imageUrl: threadDB.imageUrl,
+          comments: threadDB._count.comments,
+          likes: threadDB._count.likes,
+          isLike: threadDB.likes.some((userLike) => {
+            return username === userLike.user.username;
+          }),
+        },
+        userLikes: threadDB.likes,
+        userComments: threadDB.comments,
+      };
+    });
+
+    const authorThreads = threadsByFormat.filter((thread)=>{
+      return thread.threadData.username===authorName
+    })
+
+    res.status(201).json(authorThreads);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to find threads" });
+  }
+}
+
+async function findAllMediaByName(req: Request, res: Response) {
+  const username = res.locals.user.username;
+  const {authorName} = req.params
+  console.log(authorName)
+
+  if (!authorName) {
+    return res
+      .status(400)
+      .json({ error: "Failed to find users: 'name' parameter is required" });
+  }
+
+  try {
+    const threads = await ThreadService.findAllThreads();
+
+    const Allmedia = threads?.map((threadDB) => {
+      return {
+        threadData: {
+          name: threadDB.author.name,
+          profilePictureUrl: threadDB.author.profilePictureUrl,
+          username: threadDB.author.username,
+          id: threadDB.id,
+          caption: threadDB.caption,
+          duration: calculateDuration(threadDB.createdAt),
+          imageUrl: threadDB.imageUrl,
+          comments: threadDB._count.comments,
+          likes: threadDB._count.likes,
+          isLike: threadDB.likes.some((userLike) => {
+            return username === userLike.user.username;
+          }),
+        },
+        userLikes: threadDB.likes,
+        userComments: threadDB.comments,
+      };
+    });
+
+    const authorThreads = Allmedia.filter((media)=>{
+      return ((media.threadData.username===authorName) && (media.threadData.imageUrl))
+    })
+
+    res.status(201).json(authorThreads);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to find threads" });
+  }
+}
+
 async function findOne(req: Request, res: Response) {
   try {
     const { postId } = req.params;
@@ -103,4 +193,4 @@ async function deleted(req: Request, res: Response) {
   }
 }
 
-export default { findAll, findOne, create, update, deleted };
+export default { findAll, findOne, create, update, deleted,findAllByName,findAllMediaByName };

@@ -8,6 +8,8 @@ const router = express.Router();
 
 router.post("/thread", authenticate, upload.single("imageUrl"), ThreadController.create);
 router.get("/threads", authenticate, ThreadController.findAll);
+router.get("/threads/:authorName", authenticate, ThreadController.findAllByName);
+router.get("/media/:authorName", authenticate, ThreadController.findAllMediaByName);
 router.patch("/thread/:postId", authenticate, threadAuth, upload.single("imageUrl"), ThreadController.update);
 router.get("/thread/:postId", ThreadController.findOne);
 router.delete("/thread/:postId", authenticate, threadAuth, ThreadController.deleted);
