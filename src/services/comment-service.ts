@@ -1,14 +1,75 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { CreateCommentDTO, UpdateCommentDTO } from "../dto/dto-comment";
 import uploadCloudinary from "../cloudinary-config";
+import { MyCommentsType } from "../types/comment-types";
+import { ReplyComment } from "../dto/dto-based-on-schema";
 
 const prisma = new PrismaClient();
 
-async function findAllComments(threadId: number) {
+async function findAllComments() {
   try {
-    const comments = await prisma.comment.findMany({
+    const comments = (await prisma.comment.findMany({
+      include: {
+        author: {
+          select: {
+            name: true,
+            username: true,
+            profilePictureUrl: true,
+          },
+        },
+        likes: {
+          select: {
+            user: {
+              select: {
+                name: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+        _count: { select: { likes: true } },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })) as MyCommentsType[];
+    return comments;
+  } catch (error) {
+    console.error("Error fetching all comments:", error);
+    throw error;
+  }
+}
+
+async function findAllCommentsByUserId(threadId: number) {
+  try {
+    const comments = (await prisma.comment.findMany({
       where: { threadId },
-    });
+      include: {
+        author: {
+          select: {
+            name: true,
+            username: true,
+            profilePictureUrl: true,
+          },
+        },
+        likes: {
+          select: {
+            user: {
+              select: {
+                name: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+        _count: { select: { likes: true } },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })) as MyCommentsType[];
     return comments;
   } catch (error) {
     console.error("Error fetching all comments:", error);
@@ -85,20 +146,54 @@ async function updateComment(commentId: number, updateData: UpdateCommentDTO) {
   }
 }
 
-async function deleteComment(commentId: number) {
+export const deleteComment = async (commentId: number) => {
   try {
-    const deletedComment = await prisma.comment.delete({
+    // Verifikasi apakah komentar tersebut ada
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { id: true },
+    });
+
+
+    // Hapus likes pada komentar
+    await prisma.commentLike.deleteMany({
+      where: { commentId },
+    });
+
+    // Cari semua balasan komentar terkait komentar
+    const replyComments = await prisma.replyComment.findMany({
+      where: { commentId },
+      select: { id: true },
+    }) as ReplyComment[];
+
+    if (replyComments.length > 0) {
+      const replyCommentIds = replyComments.map((reply) => reply.id);
+
+      // Hapus likes pada balasan komentar
+      await prisma.replyCommentLike.deleteMany({
+        where: { replyCommentId: { in: replyCommentIds } },
+      });
+
+      // Hapus balasan komentar
+      await prisma.replyComment.deleteMany({
+        where: { id: { in: replyCommentIds } },
+      });
+    }
+
+    // Hapus komentar
+    await prisma.comment.delete({
       where: { id: commentId },
     });
-    return deletedComment;
+
+    return { message: "Comment deleted successfully" };
   } catch (error) {
-    console.error("Error deleting comment:", error);
-    throw error;
+    throw new Error(`Error deleting comment: ${error.message}`);
   }
-}
+};
 
 export default {
   findAllComments,
+  findAllCommentsByUserId,
   findCommentById,
   createComment,
   updateComment,

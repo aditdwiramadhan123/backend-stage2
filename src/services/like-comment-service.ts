@@ -26,15 +26,29 @@ const prisma = new PrismaClient();
   }
 }
 
- async function likeComment(userId:number, commentId:number
-) {
+
+async function likeComment(commentId: number, userId: number) {
   try {
     const newCommentLike = await prisma.commentLike.create({
-      data: {commentId,userId},
+      data: { commentId, userId },
     });
     return newCommentLike;
   } catch (error) {
-    console.error("Error liking comment:", error);
+    try {
+      const deletedCommentLike = await prisma.commentLike.delete({
+        where: {
+          userId_commentId: {
+            commentId: commentId,
+            userId: userId,
+          },
+        },
+      });
+      return deletedCommentLike;
+    } catch (error) {
+      console.error("Error unliking comment:", error);
+      throw error;
+    }
+
     throw error;
   }
 }

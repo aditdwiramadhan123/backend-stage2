@@ -2,12 +2,13 @@ import { PrismaClient, Prisma, Thread, User } from "@prisma/client";
 import { CreateThreadDTO, UpdateThreadDTO } from "../dto/dto-thread";
 import uploadCloudinary from "../cloudinary-config";
 import { MyThreadType, NewThreadType } from "../types/thread-types";
+import {Comment, ReplyComment} from "../dto/dto-based-on-schema";
 
 const prisma = new PrismaClient();
 
 async function findAllThreads() {
   try {
-    const threads = await prisma.thread.findMany({
+    const threads = (await prisma.thread.findMany({
       include: {
         author: {
           select: {
@@ -41,9 +42,9 @@ async function findAllThreads() {
         _count: { select: { comments: true, likes: true } },
       },
       orderBy: {
-        createdAt: 'desc' // Urutkan berdasarkan waktu pembuatan, descending
-      }
-    } )as MyThreadType[];
+        createdAt: "desc", // Urutkan berdasarkan waktu pembuatan, descending
+      },
+    })) as MyThreadType[];
 
     return threads;
   } catch (error) {
@@ -54,9 +55,42 @@ async function findAllThreads() {
 
 async function findThreadById(threadId: number) {
   try {
-    const thread = await prisma.thread.findUnique({
+    const thread = (await prisma.thread.findUnique({
       where: { id: threadId },
-    });
+      include: {
+        author: {
+          select: {
+            name: true,
+            username: true,
+            profilePictureUrl: true,
+          },
+        },
+        comments: {
+          select: {
+            author: {
+              select: {
+                name: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+        likes: {
+          select: {
+            user: {
+              select: {
+                name: true,
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+        _count: { select: { comments: true, likes: true } },
+      },
+    })) as MyThreadType;
+
     return thread;
   } catch (error) {
     console.error("Error fetching thread by ID:", error);
@@ -122,17 +156,72 @@ async function updateThread(threadId: number, threadData: UpdateThreadDTO) {
   }
 }
 
-async function deleteThread(threadId: number) {
+export const deleteThread = async (threadId: number) => {
   try {
-    const deletedThread = await prisma.thread.delete({
+    // Verifikasi apakah thread tersebut ada
+    const thread = await prisma.thread.findUnique({
       where: { id: threadId },
+      select: { id: true },
     });
-    return deletedThread;
+
+    if (!thread) {
+      throw new Error('Thread not found');
+    }
+
+    // Hapus likes pada thread
+    await prisma.threadLike.deleteMany({
+      where: { threadId }
+    });
+
+    // Cari semua komentar terkait thread
+    const comments = await prisma.comment.findMany({
+      where: { threadId },
+      select: { id: true }
+    }) as Comment[];
+
+    if (comments.length > 0) {
+      const commentIds = comments.map(comment => comment.id);
+
+      // Hapus likes pada komentar
+      await prisma.commentLike.deleteMany({
+        where: { commentId: { in: commentIds } }
+      });
+
+      // Cari semua balasan komentar terkait komentar
+      const replyComments = await prisma.replyComment.findMany({
+        where: { commentId: { in: commentIds } },
+      }) as ReplyComment[];
+
+      if (replyComments.length > 0) {
+        const replyCommentIds = replyComments.map(reply => reply.id);
+
+        // Hapus likes pada balasan komentar
+        await prisma.replyCommentLike.deleteMany({
+          where: { replyCommentId: { in: replyCommentIds } }
+        });
+
+        // Hapus balasan komentar
+        await prisma.replyComment.deleteMany({
+          where: { id: { in: replyCommentIds } }
+        });
+      }
+
+      // Hapus komentar
+      await prisma.comment.deleteMany({
+        where: { id: { in: commentIds } }
+      });
+    }
+
+    // Hapus thread
+    await prisma.thread.delete({
+      where: { id: threadId }
+    });
+
+    return { message: 'Thread deleted successfully' };
   } catch (error) {
-    console.error("Error deleting thread:", error);
-    throw error;
+    throw new Error(`Error deleting thread: ${error.message}`);
   }
-}
+};
 
 export default {
   findAllThreads,

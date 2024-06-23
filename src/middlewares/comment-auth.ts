@@ -17,7 +17,7 @@ export default async function commentAuth(
   const userId = res.locals.user.id; // Ambil userId dari res.locals
   console.log("User ID:", userId); // Tambahkan log untuk debugging
 
-  const commentsInThread = await commentService.findAllComments(threadIdNumber);
+  const commentsInThread = await commentService.findAllComments();
 
   const isUserComment = commentsInThread.some(
     (comment) => comment.authorId === userId && comment.id === commentIdNumber

@@ -14,14 +14,17 @@ router.post(
 );
 router.get("/comments/:threadId", CommentController.findAll);
 router.patch(
-  "/comment/:threadId/:commentId",
+  "/comment/:commentId",
+  authenticate,
   commentAuth,
   upload.single("imageUrl"),
   CommentController.update
 );
-router.get("/comment/:threadId/:commentId", CommentController.findOne);
+router.get("/comment/:commentId", CommentController.findOne);
+
 router.delete(
-  "/comment/:threadId/:commentId",
+  "/comment/:commentId",
+  authenticate,
   commentAuth,
   CommentController.deleted
 );

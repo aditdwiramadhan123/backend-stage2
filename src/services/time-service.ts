@@ -1,34 +1,55 @@
-// Fungsi untuk menghitung durasi sejak posting
-const calculateDuration = (postDate: Date | string) => {
-    // Pastikan postDate adalah objek Date
-    const parsedPostDate = typeof postDate === 'string' ? new Date(postDate) : postDate;
-    if (!(parsedPostDate instanceof Date && !isNaN(parsedPostDate.getTime()))) {
-        throw new Error('postDate tidak valid');
-    }
+const calculateDuration = (postDate: Date | string): string => {
+  // Ensure postDate is a Date object
+  const parsedPostDate = typeof postDate === 'string' ? new Date(postDate) : postDate;
+  if (!(parsedPostDate instanceof Date && !isNaN(parsedPostDate.getTime()))) {
+      throw new Error('Invalid postDate');
+  }
 
-    // Dapatkan tanggal saat ini
-    const currentDate = new Date();
+  // Get the current date
+  const currentDate = new Date();
 
-    // Hitung selisih waktu dalam milidetik
-    const timeDifference = currentDate.getTime() - parsedPostDate.getTime();
-    // Konversi selisih waktu menjadi hari
-    const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-    // Konversi selisih waktu menjadi bulan
-    const monthsDifference = Math.floor(daysDifference / 30);
-    // Konversi selisih waktu menjadi tahun
-    const yearsDifference = Math.floor(monthsDifference / 12);
+  // Calculate time difference in milliseconds
+  const timeDifference = currentDate.getTime() - parsedPostDate.getTime();
   
-    let timeDuration: string = ''; // Inisialisasi timeDuration dengan nilai default
+  // Convert time difference to seconds
+  const secondsDifference = Math.floor(timeDifference / 1000);
   
-    if (yearsDifference >= 1) {
-      timeDuration = yearsDifference === 1 ? `${yearsDifference} tahun` : `${yearsDifference} tahun`;
-    } else if (monthsDifference >= 1) {
-      timeDuration = monthsDifference === 1 ? `${monthsDifference} bulan` : `${monthsDifference} bulan`;
-    } else if (daysDifference >= 0) {
-      timeDuration = daysDifference <= 1 ? `${daysDifference} hari` : `${daysDifference} hari`;
-    }
+  if (secondsDifference < 60) {
+      return `${secondsDifference} seconds ago`;
+  }
+
+  // Convert time difference to minutes
+  const minutesDifference = Math.floor(secondsDifference / 60);
   
-    return timeDuration.toString() ; // Mengembalikan objek dengan properti timeDuration sebagai string
-}
+  if (minutesDifference < 60) {
+      return `${minutesDifference} minutes ago`;
+  }
+
+  // Convert time difference to hours
+  const hoursDifference = Math.floor(minutesDifference / 60);
+
+  if (hoursDifference < 24) {
+      return `${hoursDifference} hours ago`;
+  }
+
+  // Convert time difference to days
+  const daysDifference = Math.floor(hoursDifference / 24);
+
+  if (daysDifference < 30) {
+      return `${daysDifference} days ago`;
+  }
+
+  // Convert time difference to months
+  const monthsDifference = Math.floor(daysDifference / 30);
+
+  if (monthsDifference < 12) {
+      return `${monthsDifference} months ago`;
+  }
+
+  // Convert time difference to years
+  const yearsDifference = Math.floor(monthsDifference / 12);
+
+  return `${yearsDifference} years ago`;
+};
 
 export default calculateDuration;

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import CommentService from "../services/comment-service";
 import { CreateCommentDTO, UpdateCommentDTO } from "../dto/dto-comment";
+import calculateDuration from "../services/time-service";
 
 const prisma = new PrismaClient();
 
@@ -9,8 +10,27 @@ async function findAll(req: Request, res: Response) {
   try {
     const { threadId } = req.params;
     const threadIdNumber = Number(threadId);
-    const comments = await CommentService.findAllComments(threadIdNumber);
-    res.status(200).json(comments);
+    const commentsService = await CommentService.findAllCommentsByUserId(threadIdNumber);
+    const username = res.locals.user.username
+    const commentsController = commentsService?.map((comment) => {
+      return {
+        commentData: {
+          name: comment.author.name,
+          profilePictureUrl: comment.author.profilePictureUrl,
+          username: comment.author.username,
+          id: comment.id,
+          caption: comment.content,
+          duration: calculateDuration(comment.createdAt),
+          imageUrl: comment.imageUrl,
+          likes: comment._count.likes,
+          isLike: comment.likes.some((userLike) => {
+            return username === userLike.user.username;
+          }),
+        },
+        userLikes: comment.likes
+      };
+    });
+    res.status(200).json(commentsController);
   } catch (error) {
     res.status(500).json({ error: "Failed to find comments" });
   }

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import LikeThreadService from "../services/like-thread-service";
+import { redisClient } from "../libs/redis";
 
 const prisma = new PrismaClient();
 
@@ -18,6 +19,7 @@ async function createLike(req: Request, res: Response) {
       threadIdNumber,
       userIdNumber
     );
+    redisClient.del("THREADS_DATA");
     res.status(200).json(likedThread);
   } catch (error) {
     res.status(500).json({ error: "Failed to like thread" });

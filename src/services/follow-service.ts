@@ -25,26 +25,54 @@ interface FollowingType {
   };
 }
 
-async function findAllFollowingUser(userId: number) {
+async function findAll() {
   try {
-    const following = await prisma.follow.findMany({
-      where: { followerId: userId }, select:{
-        following:{
-          select:{
+    const follower = (await prisma.follow.findMany({
+      select: {
+        follower: {
+          select: {
             id: true,
-            name:true,
-            username:true,
-            profilePictureUrl:true,
+            name: true,
+            username: true,
+            profilePictureUrl: true,
             // follower
             following: {
-              select:{
-                followerId:true
-              }
-            }
-          }
+              select: {
+                followerId: true,
+              },
+            },
+          },
         },
-      }
-    }) as FollowingType[];
+      },
+    })) as FollowerType[];
+    return follower;
+  } catch (error) {
+    console.error("Error fetching all follower:", error);
+    throw error;
+  }
+}
+
+async function findAllFollowingUser(userId: number) {
+  try {
+    const following = (await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: {
+        following: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            profilePictureUrl: true,
+            // follower
+            following: {
+              select: {
+                followerId: true,
+              },
+            },
+          },
+        },
+      },
+    })) as FollowingType[];
     return following;
   } catch (error) {
     console.error("Error fetching all following:", error);
@@ -54,24 +82,26 @@ async function findAllFollowingUser(userId: number) {
 
 async function findAllFollowerUser(userId: number) {
   try {
-    const follower = await prisma.follow.findMany({
-      where: { followingId: userId }, select:{
-        follower:{
-          select:{
+    const follower = (await prisma.follow.findMany({
+      where: { followingId: userId },
+      select: {
+        follower: {
+          select: {
             id: true,
-            name:true,
-            username:true,
-            profilePictureUrl:true,
+            name: true,
+            username: true,
+            profilePictureUrl: true,
             // follower
             following: {
-              select:{
-                followerId:true
-              }
-            }
-          }
+              select: {
+                followerId: true,
+                
+              },
+            },
+          },
         },
-      }
-    }) as FollowerType[];
+      },
+    })) as FollowerType[];
     return follower;
   } catch (error) {
     console.error("Error fetching all follower:", error);
@@ -90,7 +120,6 @@ async function findFollowById(followId: number) {
     throw error;
   }
 }
-
 
 async function createFollow(followerId: number, followingId: number) {
   try {
@@ -139,10 +168,8 @@ async function isFollowing(followerId: number, followingId: number) {
   }
 }
 
-
-
-
 export default {
+  findAll,
   findAllFollowerUser,
   findAllFollowingUser,
   createFollow,

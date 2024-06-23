@@ -74,4 +74,25 @@ async function findLikesAll(req: Request, res: Response) {
   }
 }
 
-export default { likeReplyComment, unlikeReplyComment, findOne, findLikesAll };
+async function deleteLikeReplyByCommentId(req: Request, res: Response) {
+  try {
+    const { commentId } = req.params;
+    const commentIdNumber = Number(commentId);
+    await LikeReplyCommentService.unlikeCommentReply(commentIdNumber);
+    res
+      .status(200)
+      .json(
+        `succses delete id like reply comment by comment id = ${commentIdNumber}`
+      );
+  } catch (error) {
+    res.status(500).json({ error: "Failed to unlike all reply comment by comment id = ${commentIdNumber}" });
+  }
+}
+
+export default {
+  likeReplyComment,
+  unlikeReplyComment,
+  findOne,
+  findLikesAll,
+  deleteLikeReplyByCommentId,
+};

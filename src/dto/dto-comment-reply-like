@@ -1,0 +1,28 @@
+export default interface ReplyCommentType  {
+  id: number;
+  content: string;
+  imageUrl?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  commentId: number;
+  authorId: number;
+};
+
+type ReplyCommentLike = {
+  id: number;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: number;
+  replyCommentId: number;
+};
+
+// Contoh penggunaan tipe data kustom
+const exampleReplyComment: ReplyCommentType = {
+  id: 1,
+  content: 'This is a reply comment',
+  imageUrl: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  commentId: 1,
+  authorId: 1
+};

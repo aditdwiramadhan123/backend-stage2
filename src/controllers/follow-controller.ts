@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import FollowService from "../services/follow-service";
+import userService from "../services/user-service";
 
 async function findAllFollowing(req: Request, res: Response) {
   try {
@@ -29,10 +30,46 @@ async function findAllFollowing(req: Request, res: Response) {
 
 async function findAllFollowers(req: Request, res: Response) {
   try {
+    const userLoginId = res.locals.user.id;
     const { userId } = req.params;
     const userIdNumber = Number(userId);
-    const followers = await FollowService.findAllFollowerUser(userIdNumber);
+    const followersService = await FollowService.findAllFollowerUser(userIdNumber);
+    const followers = followersService.map((follower) => {
+      return {
+        id: follower.follower.id,
+        name: follower.follower.name,
+        username: follower.follower.username,
+        profilePictureUrl: follower.follower.profilePictureUrl,
+        isFollow: follower.follower.following.some((following) => {
+          return userLoginId === following.followerId;
+        }),
+      };
+    });
     res.status(200).json(followers);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to find followers" });
+  }
+}
+
+async function suggestFriends(req: Request, res: Response) {
+  try {
+    const userLoginId = res.locals.user.id;
+    const usersService = await userService.findAllUsers();
+    const users = usersService.map((user) => {
+      return {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        profilePictureUrl: user.profilePictureUrl,
+        isFollow: user.following.some((following) => {
+          return userLoginId === following.followerId;
+        }),
+      };
+    });
+    const suggestFriends = users.filter((user)=>{
+      return (user.isFollow==false) && (user.id!=userLoginId)
+    })
+    res.status(200).json(suggestFriends);
   } catch (error) {
     res.status(500).json({ error: "Failed to find followers" });
   }
@@ -84,4 +121,4 @@ async function unFollow(req: Request, res: Response) {
   }
 }
 
-export default { findAllFollowing, findAllFollowers, following, unFollow };
+export default { findAllFollowing, findAllFollowers, following, unFollow,suggestFriends };

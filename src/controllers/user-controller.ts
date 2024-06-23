@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import UserService from "../services/user-service";
+import VerifyService from "../services/verify-service";
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
   CreateAccountDTO,
@@ -7,6 +8,7 @@ import {
   LoginAccountDTO,
 } from "../dto/dto-user";
 import userService from "../services/user-service";
+import { transporter } from "../libs/nodemailer";
 const prisma = new PrismaClient();
 
 async function findAllByName(req: Request, res: Response) {
@@ -24,14 +26,9 @@ async function findAllByName(req: Request, res: Response) {
     });
     // console.log("ini users", usersFormService[0].followers);
     const userId = res.locals.user.id;
-    console.log("ini user id",userId);
+    console.log("ini user id", userId);
 
     const users = usersFormService?.map((user) => {
-      user.following.forEach((follower)=>{
-        console.log("ini followrId",follower.followerId)
-       
-
-      })
       return {
         id: user.id,
         name: user.name,
@@ -52,7 +49,13 @@ async function findAllByName(req: Request, res: Response) {
 }
 
 async function findOne(req: Request, res: Response) {
-  const username = res.locals.user.username;
+  const username = req.query.username as string;
+  console.log("ini username: ", username);
+  if (!username) {
+    return res
+      .status(400)
+      .json({ error: "Failed to find users: 'name' parameter is required" });
+  }
   try {
     console.log("username", username);
     const user = await UserService.findUserByName(username);
@@ -68,6 +71,7 @@ async function create(req: Request, res: Response) {
   try {
     const data: CreateAccountDTO = req.body;
     const allUser = await userService.findAllUsers();
+    const fullUrl = req.protocol + "://" + req.get("host");
 
     const isUsernameTaken = allUser.some((user) => {
       return user.username == data.username;
@@ -93,6 +97,16 @@ async function create(req: Request, res: Response) {
       });
     }
     const newUser = await UserService.createUser(data);
+
+    const info = await transporter.sendMail({
+      from: "B54-circle <aditjimmysullivan@gmail.com>", // sender address
+      to: newUser.newUser.email, // list of receivers
+      subject: "Verification Link", // Subject line
+      html: `<a href="${fullUrl}/api/v1/verify-email?token=${newUser.token}">Klik untuk verifikasi email kamu!</a>`, // html body
+    });
+
+    await VerifyService.createVerification(newUser.token,"EMAIL");
+
     res.status(201).json(newUser);
   } catch (error) {
     res.status(500).json({ error });
@@ -144,7 +158,15 @@ async function login(req: Request, res: Response) {
     const Userlogin = await userService.loginUser(dataUser);
     res.status(201).json(Userlogin);
   } catch (error) {
-    res.status(500).json({ error: "Failed to login" });
+    console.error("Error logging in user:", error);
+    // Customize the response based on the error type
+    if (error.message === "User not found" || error.message === "email not verified" || error.message === "Password not valid") {
+      res.status(400).json({ error: error.message });
+    } else if (error.name === "ValidationError") {
+      res.status(422).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "An unexpected error occurred" });
+    }
   }
 }
 
@@ -153,6 +175,17 @@ async function check(req: Request, res: Response) {
     res.json(res.locals.user);
     const token = req.headers.authorization;
     console.log(token);
+  } catch (error) {
+    res.status(500).json({ error: error });
+  }
+}
+
+async function verifyEmail(req: Request, res: Response) {
+  try {
+    const token = req.query.token as string;
+    await VerifyService.verify(token);
+    const frontendUrl = process.env.FRONTEND_URL;
+    res.redirect(`${frontendUrl}`);
   } catch (error) {
     res.status(500).json({ error: "Failed to login" });
   }
@@ -166,4 +199,5 @@ export default {
   update,
   check,
   findAllByName,
+  verifyEmail,
 };

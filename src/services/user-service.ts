@@ -1,4 +1,4 @@
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient, User, VerificationType } from "@prisma/client";
 import {
   CreateAccountDTO,
   UpdateAccountDTO,
@@ -13,25 +13,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import uploadCloudinary from "../cloudinary-config";
 import { number } from "joi";
+import { MyTypeUser } from "../dto/dto-user";
+import { transporter } from "../libs/nodemailer";
 
 const prisma = new PrismaClient();
-
-type Follower = {
-  followingId: number;
-};
-
-type Following = {
-  followerId: number;
-};
-
-interface MyTypeUser extends User {
-  followers: Follower[];
-  following: Following[];
-  _count: {
-    followers: number;
-    following: number;
-  };
-}
 
 async function findAllUsers() {
   try {
@@ -64,14 +49,14 @@ async function findAllUsersByName(username: string) {
 
 async function findUserByName(username: string) {
   try {
-    const user = await prisma.user.findUnique({
+    const user = (await prisma.user.findUnique({
       where: { username },
       include: {
-        followers: { select: { followingId: true, } },
+        followers: { select: { followingId: true } },
         following: { select: { followerId: true } },
-        _count :{select:{followers:true,following:true}}
+        _count: { select: { followers: true, following: true } },
       },
-    }) as MyTypeUser;
+    })) as MyTypeUser;
     return user;
   } catch (error) {
     console.error("Error fetching user by username:", error);
@@ -98,6 +83,7 @@ async function createUser(userData: CreateAccountDTO) {
     console.error("Error creating user:", error);
     throw error;
   }
+  
 }
 
 async function updateUser(username: string, updateData: UpdateAccountDTO) {
@@ -114,15 +100,25 @@ async function updateUser(username: string, updateData: UpdateAccountDTO) {
       }
     }
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = (await prisma.user.update({
       where: { username },
       data: {
         ...updateData,
         profilePictureUrl: profilePictureUrl.secure_url,
       },
-    });
+      include: {
+        followers: { select: { followingId: true } },
+        following: { select: { followerId: true } },
+        _count: { select: { followers: true, following: true } },
+      },
+    })) as MyTypeUser;
 
-    return updatedUser;
+    if (!updatedUser) throw new Error("User not found");
+
+    const jwtSecret = process.env.JWT_SECRET;
+    const token = jwt.sign(updatedUser, jwtSecret);
+
+    return { token, updatedUser };
   } catch (error) {
     console.error("Error updating user:", error);
     throw error;
@@ -148,13 +144,20 @@ async function loginUser(userData: LoginAccountDTO) {
       throw new Error(validate.error.message);
     }
 
-    const userDB = await prisma.user.findUnique({
+    const userDB = (await prisma.user.findUnique({
       where: {
         email: userData.email,
       },
-    });
+      include: {
+        followers: { select: { followingId: true } },
+        following: { select: { followerId: true } },
+        _count: { select: { followers: true, following: true } },
+      },
+    })) as MyTypeUser;
 
     if (!userDB) throw new Error("User not found");
+    if (!userDB.isVerified) throw new Error("email not verified");
+
 
     const isValidPassword = await bcrypt.compare(
       userData.password,
@@ -173,6 +176,7 @@ async function loginUser(userData: LoginAccountDTO) {
     throw error;
   }
 }
+
 
 export default {
   findAllUsers,

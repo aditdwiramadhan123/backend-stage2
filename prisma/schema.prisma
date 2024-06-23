@@ -18,6 +18,7 @@ model User {
   coverPictureUrl   String? // nullable
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  isVerified        Boolean  @default(false)
 
   // Relationships
   threads           Thread[]
@@ -129,5 +130,23 @@ model Follow {
   followingId Int
   following   User @relation("following", fields: [followingId], references: [id])
 
-   @@unique([followerId, followingId]) // Unique constraint to ensure one person follow only one
+  @@unique([followerId, followingId]) // Unique constraint to ensure one person follow only one
+}
+
+
+model Verification {
+  id Int @id @default(autoincrement())
+
+  token String           @unique
+  type  VerificationType @default(EMAIL)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("verifications")
+}
+
+enum VerificationType {
+  FORGOT_PASSWORD
+  EMAIL
 }
